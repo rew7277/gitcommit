@@ -1,0 +1,13 @@
+/* Extended styles loaded after base.html inline CSS */
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #2a2d35; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #3a3d45; }
+
+/* Selection */
+::selection { background: #6366f122; color: #e2e4ea; }
+
+/* Focus ring override for accessibility */
+:focus-visible { outline: 2px solid #6366f1; outline-offset: 2px; }

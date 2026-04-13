@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>{% block title %}AI API Reviewer{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:       #0a0c10;
+  --bg2:      #111318;
+  --bg3:      #1a1d24;
+  --border:   #2a2d35;
+  --text:     #e2e4ea;
+  --muted:    #6b7080;
+  --accent:   #6366f1;
+  --accent2:  #22d3ee;
+  --green:    #22c55e;
+  --yellow:   #f59e0b;
+  --red:      #ef4444;
+  --font:     'Space Grotesk', sans-serif;
+  --mono:     'JetBrains Mono', monospace;
+  --radius:   8px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 15px; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.6;
+}
+a { color: var(--accent2); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ── Layout ── */
+.app-layout { display: flex; min-height: 100vh; }
+.sidebar {
+  width: 220px; flex-shrink: 0;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  padding: 1.5rem 1rem;
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+}
+.main { flex: 1; padding: 2rem; overflow-x: hidden; }
+
+/* ── Sidebar ── */
+.logo {
+  font-family: var(--mono); font-size: 0.85rem; font-weight: 500;
+  color: var(--accent2); letter-spacing: 0.05em;
+  padding: 0.5rem 0.75rem; margin-bottom: 1.5rem;
+  border: 1px solid var(--accent2);
+  border-radius: var(--radius); text-align: center;
+}
+.nav-label {
+  font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--muted); padding: 0 0.5rem; margin-bottom: 0.5rem; margin-top: 1rem;
+}
+.nav-link {
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.55rem 0.75rem; border-radius: var(--radius);
+  color: var(--muted); font-size: 0.9rem; transition: all 0.15s;
+}
+.nav-link:hover, .nav-link.active {
+  background: var(--bg3); color: var(--text); text-decoration: none;
+}
+.nav-link.active { color: var(--accent2); }
+.nav-icon { width: 16px; text-align: center; font-style: normal; }
+.sidebar-footer {
+  margin-top: auto; padding-top: 1rem;
+  border-top: 1px solid var(--border); font-size: 0.82rem;
+}
+.avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 1px solid var(--border); vertical-align: middle;
+}
+
+/* ── Page header ── */
+.page-header { margin-bottom: 2rem; }
+.page-title { font-size: 1.4rem; font-weight: 600; color: var(--text); }
+.page-sub { font-size: 0.9rem; color: var(--muted); margin-top: 0.2rem; }
+
+/* ── Cards ── */
+.card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.25rem;
+}
+.card-sm { padding: 1rem; }
+
+/* ── Stats row ── */
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr)); gap: 1rem; margin-bottom: 2rem; }
+.stat-card { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.25rem; }
+.stat-label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.stat-value { font-size: 1.6rem; font-weight: 600; font-family: var(--mono); margin-top: 0.2rem; }
+
+/* ── Table ── */
+table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+th { text-align: left; font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--border); }
+td { padding: 0.75rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--bg3); }
+
+/* ── Badges ── */
+.badge {
+  display: inline-flex; align-items: center;
+  font-size: 0.72rem; font-family: var(--mono); padding: 0.2rem 0.55rem;
+  border-radius: 4px; font-weight: 500; white-space: nowrap;
+}
+.badge-pending  { background: #1e293b; color: #64748b; }
+.badge-processing { background: #1e1b3a; color: #818cf8; }
+.badge-done     { background: #052e16; color: #22c55e; }
+.badge-error    { background: #2d0f0f; color: #ef4444; }
+.badge-low      { background: #052e16; color: #22c55e; }
+.badge-medium   { background: #2d1f00; color: #f59e0b; }
+.badge-high     { background: #2d0f0f; color: #ef4444; }
+.badge-break    { background: #2d1500; color: #fb923c; }
+.badge-sec      { background: #1a0a2e; color: #c084fc; }
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.55rem 1.1rem; border-radius: var(--radius);
+  font-size: 0.875rem; font-family: var(--font); font-weight: 500;
+  cursor: pointer; border: 1px solid transparent; transition: all 0.15s;
+}
+.btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn-primary:hover { background: #4f46e5; text-decoration: none; }
+.btn-outline { background: transparent; color: var(--text); border-color: var(--border); }
+.btn-outline:hover { background: var(--bg3); text-decoration: none; }
+.btn-danger  { background: transparent; color: var(--red); border-color: var(--red); }
+.btn-danger:hover  { background: #2d0f0f; text-decoration: none; }
+.btn-sm { padding: 0.3rem 0.75rem; font-size: 0.8rem; }
+button.btn { font-size: 0.875rem; }
+
+/* ── Code/pre blocks ── */
+pre {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  line-height: 1.7;
+  color: #a5f3fc;
+}
+
+/* ── Markdown review output ── */
+.review-body { font-size: 0.9rem; line-height: 1.75; }
+.review-body h2 { font-size: 1rem; margin: 1.5rem 0 0.5rem; color: var(--accent2); border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; }
+.review-body p, .review-body li { color: var(--text); }
+.review-body ul, .review-body ol { padding-left: 1.5rem; }
+.review-body code { font-family: var(--mono); font-size: 0.82rem; background: var(--bg3); padding: 0.15rem 0.4rem; border-radius: 4px; color: var(--accent2); }
+.review-body hr { border: none; border-top: 1px solid var(--border); margin: 1rem 0; }
+.review-body strong { color: #fff; }
+
+/* ── Forms ── */
+.form-group { margin-bottom: 1.2rem; }
+label { display: block; font-size: 0.82rem; color: var(--muted); margin-bottom: 0.4rem; }
+input, select, textarea {
+  width: 100%; padding: 0.6rem 0.85rem;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius); color: var(--text);
+  font-family: var(--font); font-size: 0.9rem;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none; border-color: var(--accent);
+}
+
+/* ── Flash messages ── */
+.flash { padding: 0.75rem 1rem; border-radius: var(--radius); margin-bottom: 1.5rem; font-size: 0.88rem; }
+.flash-success { background: #052e16; border: 1px solid #166534; color: var(--green); }
+.flash-error   { background: #2d0f0f; border: 1px solid #7f1d1d; color: var(--red); }
+
+/* ── Spinner ── */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner { width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.6s linear infinite; display: inline-block; }
+
+/* ── Empty state ── */
+.empty { text-align: center; padding: 3rem 1rem; color: var(--muted); }
+.empty-icon { font-size: 2rem; margin-bottom: 0.75rem; }
+.empty p { font-size: 0.9rem; }
+
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .main { padding: 1.25rem; }
+}
+</style>
+{% block head %}{% endblock %}
+</head>
+<body>
+{% if request.session.get("user_id") %}
+<div class="app-layout">
+  <nav class="sidebar">
+    <div class="logo">⬡ API REVIEWER</div>
+    <div class="nav-label">Navigation</div>
+    <a href="/dashboard" class="nav-link {% if request.url.path == '/dashboard' %}active{% endif %}">
+      <i class="nav-icon">⬛</i> Dashboard
+    </a>
+    <a href="/repos/connect" class="nav-link {% if 'connect' in request.url.path %}active{% endif %}">
+      <i class="nav-icon">+</i> Add Repo
+    </a>
+    <a href="/reviews" class="nav-link {% if request.url.path == '/reviews' %}active{% endif %}">
+      <i class="nav-icon">≡</i> Reviews
+    </a>
+    <div class="nav-label">Settings</div>
+    <a href="/api/docs" class="nav-link" target="_blank">
+      <i class="nav-icon">◈</i> API Docs
+    </a>
+    <div class="sidebar-footer">
+      {% if user is defined %}
+      <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.75rem;">
+        <img src="{{ user.avatar_url }}" class="avatar" alt="avatar"/>
+        <span style="font-size:0.82rem;color:var(--text);">{{ user.username }}</span>
+      </div>
+      {% endif %}
+      <a href="/auth/logout" class="btn btn-outline btn-sm" style="width:100%;justify-content:center;">Sign out</a>
+    </div>
+  </nav>
+  <main class="main">
+    {% block content %}{% endblock %}
+  </main>
+</div>
+{% else %}
+{% block public_content %}{% endblock %}
+{% endif %}
+</body>
+</html>

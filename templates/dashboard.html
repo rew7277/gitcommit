@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — AI API Reviewer{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-title">Dashboard</div>
+  <div class="page-sub">Overview of your connected repos and recent reviews</div>
+</div>
+
+{% set msg = request.query_params.get('msg') %}
+{% if msg == 'repo_connected' %}
+<div class="flash flash-success">✓ Repository connected and webhook installed successfully.</div>
+{% elif msg == 'repo_disconnected' %}
+<div class="flash flash-success">✓ Repository disconnected and webhook removed.</div>
+{% endif %}
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-label">Repos</div>
+    <div class="stat-value" style="color:var(--accent2)">{{ stats.total_repos }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Total Reviews</div>
+    <div class="stat-value">{{ stats.total_reviews }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Breaking Changes</div>
+    <div class="stat-value" style="color:var(--yellow)">{{ stats.breaking }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Security Issues</div>
+    <div class="stat-value" style="color:var(--red)">{{ stats.security }}</div>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:2rem;">
+  <!-- Connected Repos -->
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+      <h2 style="font-size:0.95rem;font-weight:600;">Connected Repos</h2>
+      <a href="/repos/connect" class="btn btn-primary btn-sm">+ Add</a>
+    </div>
+    {% if repos %}
+    <div>
+      {% for repo in repos %}
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:0.65rem 0;border-bottom:1px solid var(--border);">
+        <div>
+          <div style="font-size:0.88rem;font-weight:500;">{{ repo.name }}</div>
+          <div style="font-size:0.78rem;color:var(--muted);">{{ repo.full_name }}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.5rem;">
+          <span class="badge badge-done">active</span>
+          <form action="/repos/{{ repo.id }}/disconnect" method="post" style="margin:0;">
+            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Disconnect {{ repo.name }}?')">✕</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty">
+      <div class="empty-icon">◈</div>
+      <p>No repos connected yet.<br/><a href="/repos/connect">Connect your first repo →</a></p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Recent Activity -->
+  <div class="card">
+    <div style="margin-bottom:1rem;">
+      <h2 style="font-size:0.95rem;font-weight:600;">Recent Reviews</h2>
+    </div>
+    {% if recent %}
+    <div>
+      {% for r in recent %}
+      <a href="/reviews/{{ r.id }}" style="display:block;text-decoration:none;">
+        <div style="padding:0.65rem 0;border-bottom:1px solid var(--border);">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-size:0.85rem;color:var(--text);font-family:var(--mono);">PR #{{ r.pr_number }}</span>
+            <span class="badge badge-{{ r.status }}">{{ r.status }}</span>
+          </div>
+          <div style="font-size:0.8rem;color:var(--muted);margin-top:0.2rem;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:220px;">
+            {{ r.pr_title or 'Untitled PR' }}
+          </div>
+          <div style="display:flex;gap:0.4rem;margin-top:0.3rem;">
+            {% if r.breaking %}<span class="badge badge-break">breaking</span>{% endif %}
+            {% if r.security_issues %}<span class="badge badge-sec">security</span>{% endif %}
+          </div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty">
+      <div class="empty-icon">≡</div>
+      <p>No reviews yet.<br/>Open a PR in a connected repo to trigger one.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Webhook URL info -->
+<div class="card" style="border-color:var(--accent);background:var(--bg3);">
+  <div style="font-size:0.82rem;color:var(--muted);margin-bottom:0.5rem;">WEBHOOK ENDPOINT (auto-registered on repo connect)</div>
+  <code style="font-family:var(--mono);font-size:0.85rem;color:var(--accent2);">POST {{ request.base_url }}webhook/github</code>
+</div>
+{% endblock %}

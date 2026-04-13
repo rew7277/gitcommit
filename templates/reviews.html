@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Reviews — AI API Reviewer{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-title">All Reviews</div>
+  <div class="page-sub">{{ reviews|length }} review{{ 's' if reviews|length != 1 }}</div>
+</div>
+
+{% if reviews %}
+<div class="card" style="padding:0;">
+  <table>
+    <thead>
+      <tr>
+        <th>PR</th>
+        <th>Repository</th>
+        <th>Author</th>
+        <th>Status</th>
+        <th>Risk</th>
+        <th>Flags</th>
+        <th>Date</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in reviews %}
+      <tr>
+        <td>
+          <span style="font-family:var(--mono);color:var(--accent2);">#{{ r.pr_number }}</span><br/>
+          <span style="font-size:0.78rem;color:var(--muted);">{{ r.pr_title[:45] if r.pr_title else '—' }}</span>
+        </td>
+        <td style="font-size:0.82rem;color:var(--muted);">{{ r.repository.name }}</td>
+        <td style="font-size:0.82rem;">{{ r.pr_author or '—' }}</td>
+        <td><span class="badge badge-{{ r.status }}">{{ r.status }}</span></td>
+        <td>
+          {% if r.meta and r.meta.get('risk') %}
+            <span class="badge badge-{{ r.meta.risk|lower }}">{{ r.meta.risk }}</span>
+          {% else %}—{% endif %}
+        </td>
+        <td>
+          {% if r.breaking %}<span class="badge badge-break">break</span> {% endif %}
+          {% if r.security_issues %}<span class="badge badge-sec">sec</span>{% endif %}
+          {% if not r.breaking and not r.security_issues %}<span style="color:var(--muted);font-size:0.8rem;">—</span>{% endif %}
+        </td>
+        <td style="font-size:0.78rem;color:var(--muted);">
+          {{ r.created_at.strftime('%b %d, %H:%M') if r.created_at else '—' }}
+        </td>
+        <td><a href="/reviews/{{ r.id }}" class="btn btn-outline btn-sm">View</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card empty">
+  <div class="empty-icon">≡</div>
+  <p>No reviews yet. Open a PR in a connected repository to trigger one.</p>
+</div>
+{% endif %}
+{% endblock %}

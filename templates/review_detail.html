@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}PR #{{ review.pr_number }} Review — AI API Reviewer{% endblock %}
+{% block head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+{% endblock %}
+{% block content %}
+
+<!-- Header -->
+<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:2rem;flex-wrap:wrap;gap:1rem;">
+  <div>
+    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.4rem;">
+      <a href="/reviews" style="color:var(--muted);font-size:0.82rem;">← Reviews</a>
+      <span style="color:var(--border);">/</span>
+      <span style="font-family:var(--mono);color:var(--accent2);font-size:0.9rem;">PR #{{ review.pr_number }}</span>
+    </div>
+    <h1 style="font-size:1.2rem;font-weight:600;">{{ review.pr_title or 'Untitled Pull Request' }}</h1>
+    <div style="display:flex;align-items:center;gap:0.75rem;margin-top:0.5rem;flex-wrap:wrap;">
+      <span class="badge badge-{{ review.status }}">{{ review.status }}</span>
+      {% if review.meta and review.meta.get('risk') %}
+        <span class="badge badge-{{ review.meta.risk|lower }}">{{ review.meta.risk }} RISK</span>
+      {% endif %}
+      {% if review.breaking %}<span class="badge badge-break">⚠ Breaking Changes</span>{% endif %}
+      {% if review.security_issues %}<span class="badge badge-sec">🔒 Security Issues</span>{% endif %}
+      {% if review.doc_committed %}
+        <span class="badge badge-done">✓ Docs committed → {{ review.doc_branch }}</span>
+      {% endif %}
+    </div>
+  </div>
+  {% if review.pr_url %}
+  <a href="{{ review.pr_url }}" target="_blank" class="btn btn-outline" style="flex-shrink:0;">
+    View on GitHub ↗
+  </a>
+  {% endif %}
+</div>
+
+<!-- Meta row -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-bottom:1.75rem;">
+  <div class="stat-card">
+    <div class="stat-label">Repository</div>
+    <div style="font-size:0.9rem;font-weight:500;margin-top:0.25rem;">{{ review.repository.name }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">PR Author</div>
+    <div style="font-size:0.9rem;font-weight:500;margin-top:0.25rem;">{{ review.pr_author or '—' }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Diff Size</div>
+    <div style="font-size:0.9rem;font-weight:500;font-family:var(--mono);margin-top:0.25rem;">
+      {{ '{:,}'.format(review.diff_size) }} chars
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Reviewed At</div>
+    <div style="font-size:0.85rem;font-weight:500;margin-top:0.25rem;">
+      {{ review.updated_at.strftime('%b %d, %Y %H:%M') if review.updated_at else '—' }}
+    </div>
+  </div>
+</div>
+
+{% if review.status == 'pending' or review.status == 'processing' %}
+<!-- Polling card -->
+<div class="card" style="text-align:center;padding:3rem 1rem;" id="processing-card">
+  <div class="spinner" style="width:24px;height:24px;margin:0 auto 1rem;border-width:3px;"></div>
+  <div style="font-size:0.95rem;color:var(--muted);">AI is reviewing this PR…</div>
+  <div style="font-size:0.8rem;color:var(--muted);margin-top:0.4rem;">This usually takes 10–30 seconds. Page will refresh automatically.</div>
+</div>
+<script>
+  (function poll() {
+    setTimeout(async () => {
+      const r = await fetch('/api/reviews/{{ review.id }}/status');
+      const d = await r.json();
+      if (d.status === 'done' || d.status === 'error') {
+        window.location.reload();
+      } else {
+        poll();
+      }
+    }, 3000);
+  })();
+</script>
+
+{% elif review.status == 'error' %}
+<div class="card" style="border-color:var(--red);">
+  <div style="color:var(--red);font-weight:500;margin-bottom:0.5rem;">Review failed</div>
+  <div style="font-size:0.85rem;color:var(--muted);">
+    {{ review.meta.get('error', 'Unknown error') if review.meta else 'Unknown error' }}
+  </div>
+</div>
+
+{% elif review.status == 'done' %}
+
+<!-- Summary quick-view -->
+{% if review.summary %}
+<div class="card" style="border-color:var(--accent);margin-bottom:1.5rem;">
+  <div style="font-size:0.75rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem;">Summary</div>
+  <div style="font-size:0.9rem;line-height:1.7;">{{ review.summary }}</div>
+</div>
+{% endif %}
+
+<!-- API Changes quick-view -->
+{% if review.api_changes and review.api_changes != 'None detected' %}
+<div class="card" style="border-color:var(--accent2);margin-bottom:1.5rem;">
+  <div style="font-size:0.75rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem;">API Changes</div>
+  <div style="font-size:0.88rem;font-family:var(--mono);line-height:1.7;color:var(--accent2);">{{ review.api_changes }}</div>
+</div>
+{% endif %}
+
+<!-- Full AI Review -->
+<div class="card">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+    <div style="font-size:0.75rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);">Full AI Review</div>
+    <button class="btn btn-outline btn-sm" onclick="copyReview()">Copy</button>
+  </div>
+  <div class="review-body" id="review-render"></div>
+</div>
+
+<script>
+const raw = {{ review.raw_review | tojson }};
+document.getElementById('review-render').innerHTML = marked.parse(raw || '');
+
+function copyReview() {
+  navigator.clipboard.writeText(raw).then(() => {
+    const btn = document.querySelector('button.btn-outline');
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 2000);
+  });
+}
+</script>
+{% endif %}
+{% endblock %}

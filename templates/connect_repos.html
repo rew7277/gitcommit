@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Connect Repository — AI API Reviewer{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-title">Connect a Repository</div>
+  <div class="page-sub">Select a GitHub repo to enable AI reviews and documentation</div>
+</div>
+
+{% if gh_repos %}
+<div class="card">
+  <input type="text" id="search" placeholder="Search repositories…" style="margin-bottom:1rem;" oninput="filterRepos(this.value)"/>
+  <div id="repo-list">
+    {% for repo in gh_repos %}
+    <div class="repo-row" data-name="{{ repo.full_name|lower }}"
+         style="display:flex;align-items:center;justify-content:space-between;padding:0.85rem 0;border-bottom:1px solid var(--border);">
+      <div>
+        <div style="font-size:0.9rem;font-weight:500;">{{ repo.name }}</div>
+        <div style="font-size:0.78rem;color:var(--muted);">{{ repo.full_name }}</div>
+        {% if repo.description %}
+        <div style="font-size:0.78rem;color:var(--muted);margin-top:0.15rem;">{{ repo.description[:80] }}</div>
+        {% endif %}
+      </div>
+      <div style="flex-shrink:0;margin-left:1rem;">
+        {% if repo.id in connected_ids %}
+          <span class="badge badge-done">connected</span>
+        {% else %}
+          <form action="/repos/connect" method="post" style="margin:0;">
+            <input type="hidden" name="github_id"   value="{{ repo.id }}"/>
+            <input type="hidden" name="full_name"   value="{{ repo.full_name }}"/>
+            <input type="hidden" name="name"        value="{{ repo.name }}"/>
+            <input type="hidden" name="description" value="{{ repo.description or '' }}"/>
+            <input type="hidden" name="private"     value="{{ repo.private }}"/>
+            <button type="submit" class="btn btn-primary btn-sm">Connect</button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% else %}
+<div class="card empty">
+  <div class="empty-icon">◈</div>
+  <p>No repositories found on your GitHub account.</p>
+</div>
+{% endif %}
+
+<script>
+function filterRepos(q) {
+  document.querySelectorAll('.repo-row').forEach(row => {
+    row.style.display = row.dataset.name.includes(q.toLowerCase()) ? 'flex' : 'none';
+  });
+}
+</script>
+{% endblock %}
